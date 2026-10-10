@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="color-scheme" content="light dark">
+  <title>Marla sucht Job</title>
+  <link rel="stylesheet" href="app/styles.css">
+  <script type="module" src="app/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <p class="site-title"><a href="#/karten">Marla sucht Job</a></p>
+      <nav aria-label="Hauptnavigation">
+        <ul id="nav" class="nav"></ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap" tabindex="-1">
+    <p>Einen Moment, die Stellen werden geladen.</p>
+    <noscript><p>Für dieses Tool brauchst du JavaScript.</p></noscript>
+  </main>
+
+  <div id="status" class="visually-hidden" role="status" aria-live="polite"></div>
+
+  <dialog id="export-dialog" aria-labelledby="export-title">
+    <h2 id="export-title">Bewertungen schicken</h2>
+    <p>Deine Bewertungen sind bisher nur hier auf deinem Gerät. Schick sie an Papa, am Handy am einfachsten über „Teilen“ und dann Messenger oder Mail. Daraus wird die nächste Suche genauer.</p>
+    <label for="export-text" class="visually-hidden">Bewertungen als Text</label>
+    <textarea id="export-text" rows="10" readonly></textarea>
+    <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
+    <div class="form-actions">
+      <button type="button" id="export-share" class="button button--primary" data-needs-text hidden>Teilen</button>
+      <button type="button" id="export-copy" class="button" data-needs-text>Kopieren</button>
+      <button type="button" id="export-download" class="button" data-needs-text>Herunterladen</button>
+      <button type="button" id="export-close" class="button button--quiet">Schließen</button>
+    </div>
+  </dialog>
+</body>
+</html>
