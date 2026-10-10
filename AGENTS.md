@@ -113,7 +113,7 @@ Eine abgegebene Bewertung sieht so aus. Genau dieses Format wird später wieder 
 Die App heißt „Next Chapter“ (Repo-Name). Sie lässt sich über Safari zum Home-Bildschirm hinzufügen und läuft dann im Vollbild.
 
 - `manifest.webmanifest`, Icons in `app/icons/` (Quelle: Archivo Black „NC“ auf Gelb, gerendert als PNG).
-- `sw.js` (Service Worker): App-Dateien kommen aus dem Cache und werden im Hintergrund aktualisiert. Neue Deploys erscheinen beim nächsten Start, ohne die Version hochzuzählen. Inhalte unter `content/` holt er zuerst übers Netz, der Cache dient nur als Offline-Fallback. **Neue Dateien in `app/` in die `SHELL`-Liste in `sw.js` eintragen**, sonst fehlen sie offline.
+- `sw.js` (Service Worker): Online wird alles frisch geladen (am 10-Minuten-HTTP-Cache von GitHub Pages vorbei), der Cache ist nur Offline-Fallback oder springt ein, wenn das Netz länger als 4 Sekunden braucht. Ein Deploy erscheint beim nächsten Start der App, ohne die Version hochzuzählen. In der App gibt es unter „Mehr“ den Button „Jetzt aktualisieren“. **Neue Dateien in `app/` in die `SHELL`-Liste, neue feste Inhaltsseiten in die `CONTENT`-Liste in `sw.js` eintragen**, sonst fehlen sie offline.
 - Im App-Modus (`html.is-app`) wandert die Navigation in eine Tab-Leiste unten. In Safari erscheint ein Hinweis zum Installieren.
 - **Wichtig:** Auf iOS hat die Home-Bildschirm-App einen eigenen `localStorage`, getrennt von Safari. Bewertungen wandern nicht von einem zum anderen. Der Installationshinweis warnt davor.
 - Die Zahl am App-Icon (Badging API) braucht auf iOS die Erlaubnis für Mitteilungen. Marla kann sie unter „Mehr“ freiwillig aktivieren. Mitteilungen werden keine verschickt.

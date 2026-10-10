@@ -622,6 +622,13 @@ function renderMore() {
         onclick: async () => { await Notification.requestPermission(); updateBadge(); renderMore(); },
       }, 'Zahl anzeigen'),
     ),
+    isApp && h('section', { class: 'more-section' },
+      h('h2', null, 'App aktualisieren'),
+      h('p', null, navigator.onLine
+        ? 'Holt die neueste Version und neue Stellen. Deine Bewertungen bleiben, wo sie sind.'
+        : 'Gerade bist du offline. Sobald du wieder Netz hast, klappt das.'),
+      h('button', { type: 'button', class: 'button', disabled: !navigator.onLine, onclick: () => location.reload() }, 'Jetzt aktualisieren'),
+    ),
     isIOS && !isApp && h('section', { class: 'more-section' },
       h('h2', null, 'Als App installieren'),
       installSteps(),

@@ -1,11 +1,11 @@
 // Service worker: makes the tool work offline.
 //
-// - App files (HTML, JS, CSS, fonts, icons): served from cache, refreshed in the
-//   background. A new deploy shows up on the next start, no version bump needed.
-// - Content (content/*.md, digests.json): network first, cache as offline fallback,
-//   so a new digest appears as soon as there is a connection.
+// Online, everything is loaded fresh from the network (revalidated, bypassing the
+// 10-minute HTTP cache of GitHub Pages), so a deploy shows up on the next start.
+// The cache is only the offline fallback, or used when the network is too slow.
 
-const CACHE = 'next-chapter-v1';
+const CACHE = 'next-chapter-v2';
+const NETWORK_TIMEOUT = 4000; // ms, then fall back to the cached copy
 
 const SHELL = [
   './',
@@ -28,16 +28,17 @@ const SHELL = [
 const CONTENT = ['content/digests.json', 'content/fristen.md', 'content/programme.md', 'content/gut-zu-wissen.md'];
 
 const url = (path) => new URL(path, self.registration.scope).href;
+const fresh = (input) => new Request(input, { cache: 'no-cache' });
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    await cache.addAll(SHELL.map(url));
+    await cache.addAll(SHELL.map((path) => fresh(url(path))));
     // Content is best effort: offline install must not fail because of it.
-    await Promise.allSettled(CONTENT.map((path) => cache.add(url(path))));
+    await Promise.allSettled(CONTENT.map((path) => cache.add(fresh(url(path)))));
     try {
-      const manifest = await (await fetch(url('content/digests.json'))).json();
-      await Promise.allSettled(manifest.digests.map((file) => cache.add(url(`content/digests/${file}`))));
+      const manifest = await (await fetch(fresh(url('content/digests.json')))).json();
+      await Promise.allSettled(manifest.digests.map((file) => cache.add(fresh(url(`content/digests/${file}`)))));
     } catch {
       // Digests get cached on first view instead.
     }
@@ -56,40 +57,30 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET' || !request.url.startsWith(self.registration.scope)) return;
-
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, url('index.html')));
-  } else if (request.url.startsWith(url('content/'))) {
-    event.respondWith(networkFirst(request));
-  } else {
-    event.respondWith(staleWhileRevalidate(event, request));
-  }
+  // All navigations show the same page, so they share one cache entry.
+  const cacheKey = request.mode === 'navigate' ? url('index.html') : request;
+  event.respondWith(networkFirst(event, request, cacheKey));
 });
 
-async function networkFirst(request, fallbackUrl) {
+async function networkFirst(event, request, cacheKey) {
   const cache = await caches.open(CACHE);
-  try {
-    const response = await fetch(request);
-    if (response.ok) cache.put(fallbackUrl || request, response.clone());
-    return response;
-  } catch {
-    const cached = await cache.match(fallbackUrl || request, { ignoreSearch: true });
-    return cached || Response.error();
-  }
-}
 
-async function staleWhileRevalidate(event, request) {
-  const cache = await caches.open(CACHE);
-  const cached = await cache.match(request, { ignoreSearch: true });
-  const refresh = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-  if (cached) {
-    event.waitUntil(refresh);
-    return cached;
+  const network = fetch(fresh(request)).then((response) => {
+    if (response.ok) cache.put(cacheKey, response.clone());
+    return response;
+  });
+  // Keep updating the cache even if we answer from it after the timeout.
+  event.waitUntil(network.catch(() => {}));
+
+  const timeout = new Promise((resolve) => setTimeout(resolve, NETWORK_TIMEOUT, 'timeout'));
+  try {
+    const result = await Promise.race([network, timeout]);
+    if (result !== 'timeout') return result;
+  } catch {
+    // offline: fall through to the cache
   }
-  return (await refresh) || Response.error();
+  const cached = await cache.match(cacheKey, { ignoreSearch: true });
+  if (cached) return cached;
+  // Nothing cached yet: wait for the network after all.
+  return network.catch(() => Response.error());
 }
