@@ -50,6 +50,7 @@ Alle Inhalte liegen unter `content/`. Das Tool liegt in `app/`. Die Pfade sind z
 | `content/profil.md` | Suchprofil (persönlich, wird nicht veröffentlicht) |
 | `content/fristen.md` | Fristen als Tabelle |
 | `content/programme.md` | Überblick Programme und Börsen |
+| `content/gut-zu-wissen.md` | Hintergrundwissen für Marla (Einschreibung, Haltung von Organisationen, Finanzierung) |
 | `content/digests/digest-YYYY-MM-DD.md` | ein Digest pro Lauf. Es kommen weitere dazu |
 | `content/digests.json` | Manifest der vorhandenen Digests |
 

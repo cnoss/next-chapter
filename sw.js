@@ -25,7 +25,7 @@ const SHELL = [
   'app/icons/icon-192.png',
 ];
 
-const CONTENT = ['content/digests.json', 'content/fristen.md', 'content/programme.md'];
+const CONTENT = ['content/digests.json', 'content/fristen.md', 'content/programme.md', 'content/gut-zu-wissen.md'];
 
 const url = (path) => new URL(path, self.registration.scope).href;
 

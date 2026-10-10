@@ -22,5 +22,6 @@ export const MANIFEST = 'content/digests.json';
 export const PAGES = [
   { slug: 'fristen', file: 'fristen.md', label: 'Fristen' },
   { slug: 'programme', file: 'programme.md', label: 'Programme' },
+  { slug: 'gut-zu-wissen', file: 'gut-zu-wissen.md', label: 'Gut zu wissen' },
   { slug: 'profil', file: 'profil.md', label: 'Profil' },
 ];
