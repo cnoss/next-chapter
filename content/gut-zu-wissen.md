@@ -23,12 +23,9 @@ Das ist wahrscheinlich die wichtigste Entscheidung für deine Suche in Deutschla
 - Freiwilligendienste im Ausland (UN Volunteers, weltwärts, Europäisches Solidaritätskorps)
 
 **Was du klären kannst:**
-1. Kannst du dich nach der Abgabe noch fürs Sommersemester 2027 (bis 30.9.) einschreiben? Das regelt deine Uni, am besten beim Studierendensekretariat fragen.
-2. Sieht deine Studienordnung ein Pflichtpraktikum vor? Dann ginge sogar mehr.
+Kannst du dich nach der Abgabe noch fürs Sommersemester 2027 (bis 30.9.) einschreiben? Das regelt deine Uni, am besten beim Studierendensekretariat fragen.
 
 ## Die Haltung von Organisationen prüfen
-
-Nicht jede Organisation, die sich für Frauenrechte einsetzt, vertritt die gleichen Positionen. Ein Beispiel:
 
 - **Equality Now** ist abolitionistisch und setzt sich für ein Sexkaufverbot nach dem nordischen Modell ein. Auf der eigenen Website wird das französische Sexkaufverbot als Erfolg gefeiert.
 - **Amnesty International** dagegen setzt sich seit 2016 für die Entkriminalisierung von Sexarbeit ein.
