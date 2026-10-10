@@ -6,7 +6,10 @@ import { renderMarkdown, renderInline } from './markdown.js';
 const main = document.getElementById('main');
 const nav = document.getElementById('nav');
 const status = document.getElementById('status');
+const tabbar = document.getElementById('tabbar');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const isApp = document.documentElement.classList.contains('is-app');
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 const state = {
   digests: [],      // file names from the manifest, newest first
@@ -31,6 +34,11 @@ function h(tag, attrs, ...children) {
   }
   el.append(...children.flat().filter((c) => c != null && c !== false));
   return el;
+}
+
+// Replace the main content. Skips empty children like h() does (null, false, arrays).
+function setMain(...children) {
+  main.replaceChildren(...children.flat(Infinity).filter((c) => c != null && c !== false && c !== ''));
 }
 
 async function fetchText(path) {
@@ -85,18 +93,35 @@ function scrollIntoViewIfNeeded(el) {
 // ---------------------------------------------------------------------------
 // Navigation and routing
 
+function navItems() {
+  const hasFristen = state.pages.some((p) => p.slug === 'fristen');
+  return [
+    { href: '#/karten', label: 'Karten', icon: 'cards', match: /^#\/(karten|karte\/)|^#?$/ },
+    { href: '#/liste', label: 'Übersicht', icon: 'list', match: /^#\/liste/ },
+    hasFristen && { href: '#/seite/fristen', label: 'Fristen', icon: 'clock', match: /^#\/seite\/fristen$/ },
+    { href: '#/mehr', label: 'Mehr', icon: 'more', match: /^#\/(mehr|so-gehts|seite\/(?!fristen))/ },
+  ].filter(Boolean);
+}
+
+// Same four items on top (browser) and in the bottom tab bar (home screen app).
 function renderNav() {
-  const items = [
-    { href: '#/karten', label: 'Karten', match: /^#\/(karten|karte\/)|^#?$/ },
-    { href: '#/liste', label: 'Übersicht', match: /^#\/liste/ },
-    ...state.pages.map((p) => ({ href: `#/seite/${p.slug}`, label: p.label, match: new RegExp(`^#/seite/${p.slug}$`) })),
-    { href: '#/so-gehts', label: 'So geht\'s', match: /^#\/so-gehts$/ },
-  ];
-  nav.replaceChildren(...items.map((item) => {
-    const current = item.match.test(location.hash);
-    return h('li', null, h('a', { href: item.href, 'aria-current': current ? 'page' : null }, item.label));
+  const items = navItems();
+  nav.replaceChildren(...items.map((item) => h('li', null,
+    h('a', { href: item.href, 'aria-current': item.match.test(location.hash) ? 'page' : null }, item.label))));
+  tabbar.replaceChildren(...items.map((item) => {
+    const icon = h('span', { class: 'tab-icon', 'aria-hidden': 'true' });
+    icon.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="miter">${TAB_ICONS[item.icon]}</svg>`;
+    return h('li', null, h('a', { href: item.href, 'aria-current': item.match.test(location.hash) ? 'page' : null }, icon, h('span', null, item.label)));
   }));
 }
+
+// Simple line icons for the tab bar (static markup, decorative).
+const TAB_ICONS = {
+  cards: '<rect x="7" y="2.5" width="12" height="16" transform="rotate(10 13 10.5)"/><rect x="4" y="5.5" width="12" height="16"/>',
+  list: '<path d="M9 6h12M9 12h12M9 18h12"/><path d="M3 5h2v2H3zM3 11h2v2H3zM3 17h2v2H3z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2.5"/>',
+  more: '<path d="M4 11h3v3H4zM10.5 11h3v3h-3zM17 11h3v3h-3z"/>',
+};
 
 function route() {
   const hash = location.hash;
@@ -107,6 +132,7 @@ function route() {
   if (page) return renderPage(page[1]);
   if (hash === '#/liste') return renderOverview();
   if (hash === '#/so-gehts') return renderIntro();
+  if (hash === '#/mehr') return renderMore();
 
   const card = hash.match(/^#\/karte\/(.+)$/);
   if (card) {
@@ -135,12 +161,13 @@ function renderCardsView() {
     ontoggle: (e) => setPref('introOpen', e.target.open),
   }, h('summary', null, 'Worum es in diesem Digest geht'), h('div', { class: 'prose' }, renderMarkdown(introMarkdown, { shiftHeadings: 1 })));
 
-  main.replaceChildren(
+  setMain(
     h('div', { class: 'digest-head' },
       h('h1', null, h('span', { class: 'mark' }, digestLabel(state.digestFile))),
       digestSwitcher(),
     ),
     h('div', { class: 'progress-area', id: 'progress' }),
+    installHint(),
     introBlock,
     entries.length
       ? h('div', { class: 'card-stage', id: 'card-stage' })
@@ -148,6 +175,26 @@ function renderCardsView() {
   );
   if (entries.length) updateCard();
   updateProgress();
+}
+
+// iPhone in Safari: suggest adding the tool to the home screen.
+function installHint() {
+  if (!isIOS || isApp || getPref('installHintDismissed', false)) return null;
+  const hasLocalRatings = state.digest.entries.some((entry) => getRating(entry)?.source === 'local');
+  const hint = h('section', { class: 'install-hint', 'aria-labelledby': 'install-title' },
+    h('h2', { id: 'install-title' }, 'Mach eine App draus'),
+    installSteps(),
+    hasLocalRatings && h('p', null, h('strong', null, 'Wichtig: '), 'Die App hat ihren eigenen Speicher. Schick deine Bewertungen hier vorher ab, sonst fehlen sie in der App.'),
+    h('button', {
+      type: 'button', class: 'button',
+      onclick: () => { setPref('installHintDismissed', true); hint.remove(); announce('Tipp ausgeblendet. Du findest ihn unter Mehr.'); },
+    }, 'Okay, verstanden'),
+  );
+  return hint;
+}
+
+function installSteps() {
+  return h('p', null, 'Tipp in Safari auf Teilen (das Quadrat mit dem Pfeil, je nach iOS hinter „…“) und dann auf „Zum Home-Bildschirm“. Dann startet Next Chapter im Vollbild und klappt auch offline.');
 }
 
 function digestSwitcher() {
@@ -344,6 +391,7 @@ function submitRating() {
   const verdict = state.pending.verdict;
   state.pending = null;
   updateProgress();
+  updateBadge();
 
   if (!ok) {
     updateCard();
@@ -453,7 +501,7 @@ function renderOverview() {
 
   const total = state.digest.entries.length;
 
-  main.replaceChildren(
+  setMain(
     h('h1', null, h('span', { class: 'mark' }, 'Übersicht')),
     h('div', { class: 'toolbar' },
       h('p', null, `${digestLabel(state.digestFile)}: ${ratedCount()} von ${total} bewertet`),
@@ -509,7 +557,7 @@ function renderIntro() {
 
   const step = (title, ...content) => h('li', { class: 'step' }, h('h2', null, title), ...content);
 
-  main.replaceChildren(
+  setMain(
     h('h1', null, h('span', { class: 'mark' }, 'Hi Marla!')),
     h('p', { class: 'lead' },
       `Hier landen Stellen, die zu dir passen könnten. Gerade liegen ${count} für dich bereit, alle paar Wochen kommt ein neuer Schwung. So funktioniert's:`,
@@ -549,14 +597,70 @@ function renderIntro() {
 }
 
 // ---------------------------------------------------------------------------
+// "Mehr" (tab bar target in the app; also reachable in the browser)
+
+function renderMore() {
+  const pageLinks = [
+    ...state.pages.filter((p) => p.slug !== 'fristen').map((p) => ({ href: `#/seite/${p.slug}`, label: p.label })),
+    { href: '#/so-gehts', label: 'So geht\'s' },
+  ];
+  const canAskBadge = isApp && 'setAppBadge' in navigator && 'Notification' in window && Notification.permission === 'default';
+
+  setMain(
+    h('h1', null, h('span', { class: 'mark' }, 'Mehr')),
+    h('ul', { class: 'more-list' }, pageLinks.map((link) => h('li', null, h('a', { href: link.href }, link.label)))),
+    h('section', { class: 'more-section' },
+      h('h2', null, 'Bewertungen'),
+      h('p', null, `${ratedCount()} von ${state.digest.entries.length} bewertet. Schick sie ab, wann immer du magst, auch zwischendurch.`),
+      h('button', { type: 'button', class: 'button button--primary', onclick: openExport }, 'Bewertungen schicken'),
+    ),
+    canAskBadge && h('section', { class: 'more-section' },
+      h('h2', null, 'Zahl am App-Icon'),
+      h('p', null, 'Das Icon kann zeigen, wie viele Karten noch offen sind. Dafür fragt dein iPhone nach Mitteilungen. Wir schicken dir keine, es geht nur um die Zahl.'),
+      h('button', {
+        type: 'button', class: 'button',
+        onclick: async () => { await Notification.requestPermission(); updateBadge(); renderMore(); },
+      }, 'Zahl anzeigen'),
+    ),
+    isIOS && !isApp && h('section', { class: 'more-section' },
+      h('h2', null, 'Als App installieren'),
+      installSteps(),
+      h('p', null, 'Achtung: Die App hat ihren eigenen Speicher. Schick deine Bewertungen hier vorher ab.'),
+    ),
+  );
+  focusMain();
+}
+
+// Number of open cards on the home screen icon (iOS needs notification permission for it).
+function updateBadge() {
+  if (!('setAppBadge' in navigator) || !state.digest) return;
+  const open = state.digest.entries.length - ratedCount();
+  (open ? navigator.setAppBadge(open) : navigator.clearAppBadge()).catch(() => {});
+}
+
+function setupApp() {
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch((error) => console.error(error));
+  }
+  // Ask the browser not to evict the ratings.
+  if (isApp && navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+
+  const offline = document.getElementById('offline');
+  const sync = () => { offline.hidden = navigator.onLine; };
+  window.addEventListener('online', sync);
+  window.addEventListener('offline', sync);
+  sync();
+}
+
+// ---------------------------------------------------------------------------
 // Content pages
 
 function renderPage(slug) {
   const page = state.pages.find((p) => p.slug === slug);
   if (!page) {
-    main.replaceChildren(h('h1', null, 'Seite nicht gefunden'), h('p', null, h('a', { href: '#/karten' }, 'Zurück zu den Karten')));
+    setMain(h('h1', null, 'Seite nicht gefunden'), h('p', null, h('a', { href: '#/karten' }, 'Zurück zu den Karten')));
   } else {
-    main.replaceChildren(h('div', { class: 'prose page' }, renderMarkdown(page.markdown)));
+    setMain(h('div', { class: 'prose page' }, renderMarkdown(page.markdown)));
   }
   focusMain();
 }
@@ -659,7 +763,7 @@ async function init() {
     ]);
   } catch (error) {
     console.error(error);
-    main.replaceChildren(
+    setMain(
       h('h1', null, 'Da hat etwas nicht geklappt'),
       h('p', null, 'Der Digest ließ sich nicht laden. Lad die Seite bitte nochmal.'),
       location.protocol === 'file:' && h('p', null, 'Hinweis: Die Seite muss über einen Server laufen, zum Beispiel mit „npx serve“.'),
@@ -671,6 +775,8 @@ async function init() {
   }
   window.addEventListener('hashchange', route);
   route();
+  updateBadge();
 }
 
+setupApp();
 init();

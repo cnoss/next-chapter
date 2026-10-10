@@ -2,11 +2,26 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow, noarchive">
   <meta name="color-scheme" content="light dark">
-  <title>Marla sucht Job</title>
+  <meta name="theme-color" content="#111111">
+  <!-- Home screen app (iOS): full screen, status bar over the black header -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Next Chapter">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Next Chapter</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="app/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="app/icons/icon-180.png">
   <link rel="stylesheet" href="app/styles.css">
+  <script>
+    // Set before first paint so the app layout (tab bar) does not flicker.
+    if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
+      document.documentElement.classList.add('is-app');
+    }
+  </script>
   <script type="module" src="app/main.js"></script>
 </head>
 <body>
@@ -14,8 +29,9 @@
 
   <header class="site-header">
     <div class="wrap site-header__inner">
-      <p class="site-title"><a href="#/karten">Marla sucht Job</a></p>
-      <nav aria-label="Hauptnavigation">
+      <p class="site-title"><a href="#/karten">Next Chapter</a></p>
+      <p id="offline" class="offline-pill" hidden>Offline</p>
+      <nav aria-label="Hauptnavigation" class="top-nav">
         <ul id="nav" class="nav"></ul>
       </nav>
     </div>
@@ -25,6 +41,11 @@
     <p>Einen Moment, die Stellen werden geladen.</p>
     <noscript><p>Für dieses Tool brauchst du JavaScript.</p></noscript>
   </main>
+
+  <!-- Bottom tab bar, only visible in the home screen app -->
+  <nav aria-label="App-Navigation" class="tabbar">
+    <ul id="tabbar"></ul>
+  </nav>
 
   <div id="status" class="visually-hidden" role="status" aria-live="polite"></div>
 

@@ -64,7 +64,14 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* No rubber-band scrolling of the whole page, no double-tap zoom delay on controls. */
+body { overscroll-behavior-y: none; }
+a, button, summary, .tag { touch-action: manipulation; }
 
 body {
   margin: 0;
@@ -116,7 +123,8 @@ h1 {
   width: 100%;
   max-width: 44rem;
   margin-inline: auto;
-  padding-inline: 1rem;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
 
 main { padding-block: 1.75rem 5rem; }
@@ -152,6 +160,7 @@ main:focus { outline: none; }
   background: var(--ink);
   color: #f4f1ea;
   border-bottom: 4px solid var(--pink);
+  padding-top: env(safe-area-inset-top); /* status bar sits on the black header */
 }
 
 .site-header__inner {
@@ -202,6 +211,66 @@ main:focus { outline: none; }
 .nav a:hover { background: #f4f1ea; color: var(--ink); }
 .nav a[aria-current="page"] { background: var(--pink); color: var(--ink); }
 .nav a:focus-visible { outline-color: var(--yellow); }
+
+.offline-pill {
+  margin: 0 auto 0 0;
+  padding: 0.1rem 0.5rem;
+  border: 2px solid var(--yellow);
+  color: var(--yellow);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  rotate: 3deg;
+}
+.offline-pill[hidden] { display: none; }
+
+/* Tab bar: only in the home screen app ------------------------------------ */
+
+.tabbar { display: none; }
+
+.is-app .top-nav { display: none; }
+.is-app main { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+
+.is-app .tabbar {
+  display: block;
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 5;
+  background: var(--ink);
+  border-top: 4px solid var(--pink);
+  padding: 0.35rem max(0.5rem, env(safe-area-inset-right)) calc(0.35rem + env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+}
+
+.tabbar ul {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.tabbar a {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.25rem;
+  color: #c9c3b8;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.tabbar a:hover { background: none; color: #f4f1ea; }
+.tabbar a[aria-current="page"] { color: var(--yellow); }
+.tabbar a[aria-current="page"] .tab-icon { background: var(--pink); color: var(--ink); rotate: -4deg; }
+.tabbar a:focus-visible { outline-color: var(--yellow); outline-offset: -2px; }
+.tab-icon { display: grid; place-items: center; width: 2.4rem; height: 1.9rem; }
+.tab-icon rect:last-child { fill: var(--ink); }
+.tabbar a[aria-current="page"] .tab-icon rect:last-child { fill: var(--pink); }
 
 /* Buttons and form controls --------------------------------------------- */
 
@@ -655,6 +724,42 @@ progress::-moz-progress-bar {
   box-shadow: var(--hard);
   margin-bottom: 2rem;
 }
+
+/* Install hint and "Mehr" ------------------------------------------------ */
+
+.install-hint {
+  margin-bottom: 2rem;
+  padding: 1rem 1.1rem;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--pink);
+}
+.install-hint h2 { margin: 0 0 0.5rem; font-size: 1.25rem; text-transform: uppercase; }
+.install-hint p { margin: 0 0 0.75rem; }
+.install-hint .button { background: var(--paper); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+
+.more-list { list-style: none; margin: 0 0 2rem; padding: 0; display: grid; gap: 0.85rem; }
+.more-list a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: var(--border);
+  box-shadow: 4px 4px 0 var(--shadow);
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.more-list a::after { content: "\2192"; font-family: var(--mono); }
+.more-list a:hover { background: var(--yellow); color: var(--ink); }
+
+.more-section { margin-bottom: 2rem; padding-top: 1.25rem; border-top: 3px dashed var(--line); }
+.more-section h2 { margin: 0 0 0.5rem; font-size: 1.25rem; text-transform: uppercase; }
+.more-section p { margin: 0 0 1rem; }
 
 /* Intro ("So geht's") ---------------------------------------------------- */
 
