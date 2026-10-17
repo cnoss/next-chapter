@@ -1,6 +1,6 @@
 # Programme und Stellenbörsen
 
-Überblick über alles, was für dich in Frage kommt. Stand 10.10.2026. Mit „(?)“ markierte Angaben sind nicht offiziell bestätigt.
+Überblick über alles, was für dich in Frage kommt. Stand 17.10.2026. Mit „(?)“ markierte Angaben sind nicht offiziell bestätigt.
 
 Passung: ++ sehr gut, + gut, o mittel
 
@@ -32,12 +32,17 @@ Passung: ++ sehr gut, + gut, o mittel
 | Organisation | Was | Geld | Passung |
 |---|---|---|---|
 | [UN Women Deutschland](https://unwomen.de/stellenausschreibungen/) | Bufdi-Stellen in Berlin und Bonn | Taschengeld | ++ |
-| [Terre des Femmes](https://frauenrechte.de/ueber-uns/stellenangebote/praktikum) | Praktikum Berlin, mind. 3 Monate, ohne Einschreibung | 400 € | + |
 | [Deutsche Welle](https://corporate.dw.com/de/karriere/s-11525) | Praktikum 1 bis 6 Monate in Bonn oder Berlin, auch nach Abschluss | vergütet | + |
 | [GIZ](https://jobs.giz.de/) | Praktika weltweit bis 6 Monate. Der Abschluss darf höchstens 6 Monate vor Beginn liegen | ca. 1.600 bis 2.200 € (?) | + |
-| [IJP](https://ijp.org/) | Journalisten-Austausch, z. B. Nordeuropa oder USA, 2 bis 3 Monate | 3.800 bis 4.000 € | + |
+| [IJP](https://ijp.org/) | Journalisten-Austausch, z. B. Nordeuropa oder USA, 2 bis 3 Monate | 3.800 bis 4.000 € | o |
 | [Friedrich-Ebert-Stiftung](https://jobs.fes.de) | Auslandsbüros nehmen teils Absolvent*innen | teils | o |
 | [Deutscher Frauenrat](https://www.frauenrat.de/stellenangebote/) | aktuell nichts ausgeschrieben, ab und zu reinschauen | | o |
+| [Deutsches Kinderhilfswerk](https://www.dkhw.de/jobs/) | Praktikum Kinderrechte und politische Interessenvertretung, Berlin, nur mit Einschreibung | unbezahlt | + |
+| [Kindernothilfe](https://www.kindernothilfe.de/jobs-und-karriere) | Praktikum fast komplett remote, vermutlich nur mit Einschreibung | 250 € | o |
+| [UNICEF Deutschland](https://jobs.unicef.de/stellenangebote.html) | Praktika in Köln, ca. 3 Monate | 1.000 € | o |
+| [Women for Women International](https://womenforwomeninternational.de/wer-wir-sind/stellenangebote) | Büro in Berlin, gelegentlich Stellen | | o |
+| [Amnesty International](https://www.amnesty.de/jobs) | Berlin, gelegentlich befristete Stellen | Haustarif | o |
+| [Reporter ohne Grenzen](https://www.reporter-ohne-grenzen.de/ueber-uns/jobs) | Berlin, Initiativbewerbung | | o |
 
 Die politischen Stiftungen (Böll, RLS, KAS) und das Goethe-Institut nehmen für Praktika nur Eingeschriebene. Siehe [profil.md](profil.md).
 
