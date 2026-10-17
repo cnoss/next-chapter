@@ -88,6 +88,7 @@ Hinweise zum Parsen:
 - Feldwerte können Markdown enthalten (`**fett**`, `` `code` ``). Für die Anzeige entfernen bzw. rendern.
 - **Frist** ist meist `TT.MM.JJJJ`, kann aber auch Text sein („laufend“, „laufend, nur über Online-Formular“). Dann keine Fristlogik anwenden.
 - **ID** ist stabil und eindeutig. Bewertungen immer an der ID festmachen, nie an der Nummer oder Position.
+- **Hinzugefügt** (optional, `TT.MM.JJJJ`): wann der Eintrag im Tool gelandet ist. Fehlt das Feld, gilt das Datum aus dem Dateinamen des Digests. Nur nötig, wenn ein Eintrag aus einem älteren Lauf in einen neuen Digest übernommen wird. Das Tool zeigt „seit TT.MM.JJJJ“ auf Karte und Übersicht und ein „Neu“-Badge für Einträge aus dem neuesten Digest. Ist ein neuerer Digest als beim letzten Besuch da, öffnet das Tool automatisch diesen.
 - Der Text vor dem ersten Eintrag (Intro, Hinweis-Blockquote) soll oben im Tool sichtbar sein.
 
 ### Format einer Bewertung

@@ -57,9 +57,21 @@ function formatDate(date) {
   return date.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric' });
 }
 
+function digestDate(file) {
+  const match = file?.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return match ? new Date(match[1], match[2] - 1, match[3]) : null;
+}
+
 function digestLabel(file) {
-  const match = file.match(/(\d{4})-(\d{2})-(\d{2})/);
-  return match ? `Digest vom ${formatDate(new Date(match[1], match[2] - 1, match[3]))}` : file;
+  const date = digestDate(file);
+  return date ? `Digest vom ${formatDate(date)}` : file;
+}
+
+/** When the entry landed in the tool: explicit "Hinzugefügt" field, else the digest date. */
+function addedInfo(entry) {
+  const date = entry.added || digestDate(state.digestFile);
+  const isNew = state.digestFile === state.digests[0] && state.digests.length > 1;
+  return { date, label: date ? `seit ${formatDate(date)}` : '', isNew };
 }
 
 function deadlineInfo(entry) {
@@ -259,6 +271,7 @@ function goToCard(index, options = { focus: null }) {
 
 function buildCard(entry) {
   const deadline = deadlineInfo(entry);
+  const added = addedInfo(entry);
   const rating = getRating(entry);
   const pending = state.pending;
   const activeVerdict = pending ? pending.verdict : rating?.verdict;
@@ -279,6 +292,8 @@ function buildCard(entry) {
     h('header', { class: 'card-header' },
       h('p', { class: 'card-meta' },
         h('span', null, `Nr. ${entry.number}`),
+        added.isNew && h('span', { class: 'badge badge--new' }, 'neu'),
+        added.label && h('span', { class: 'added' }, added.label),
         scoreView(entry.score),
       ),
       h('h2', { id: 'card-title', tabindex: '-1', 'data-key': 'card-title' }, renderInline(entry.heading)),
@@ -526,6 +541,7 @@ function renderOverview() {
 
 function overviewRow(entry) {
   const deadline = deadlineInfo(entry);
+  const added = addedInfo(entry);
   const rating = getRating(entry);
   const ratingClass = rating ? (rating.verdict === 'passt' ? 'yes' : 'no') : 'open';
 
@@ -536,7 +552,9 @@ function overviewRow(entry) {
         h('strong', null, renderInline(entry.heading)),
         h('span', { class: 'muted' }, [entry.organisation, entry.location].filter(Boolean).map((v) => renderInline(v).textContent).join(' · ')),
         h('span', { class: 'row-facts' },
+          added.isNew && h('span', { class: 'badge badge--new' }, 'neu'),
           h('span', null, `Score ${entry.score}`),
+          added.label && h('span', null, added.label),
           h('span', null, `Frist: ${entry.deadlineText || 'keine Angabe'}`),
           deadline.label && h('span', { class: `badge badge--${deadline.state}` }, deadline.label),
         ),
@@ -764,8 +782,13 @@ async function init() {
     state.digests = [...manifest.digests].sort().reverse();
     if (!state.digests.length) throw new Error('Keine Digests im Manifest');
     const preferred = getPref('digest', null);
+    // A newer digest than at the last visit wins over the remembered choice.
+    const newest = state.digests[0];
+    const knownNewest = getPref('newestSeen', null);
+    setPref('newestSeen', newest);
+    const start = knownNewest === newest && state.digests.includes(preferred) ? preferred : newest;
     await Promise.all([
-      loadDigest(state.digests.includes(preferred) ? preferred : state.digests[0]),
+      loadDigest(start),
       loadPages(),
     ]);
   } catch (error) {

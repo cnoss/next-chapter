@@ -528,6 +528,8 @@ progress::-moz-progress-bar {
 }
 .badge--soon { background: var(--yellow); color: var(--ink); border-color: var(--ink); transform: rotate(-3deg); }
 .badge--expired { text-decoration: line-through; color: var(--muted); border-color: var(--muted); }
+.badge--new { background: var(--ink); color: var(--paper, #f4f1ea); border-color: var(--ink); }
+.card-meta .added { margin-left: 0.5rem; color: var(--muted); font-weight: 400; }
 
 /* taped-on note */
 .reasoning {

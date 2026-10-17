@@ -17,6 +17,7 @@ const FIELD_KEYS = {
   'Frist': 'deadline',
   'Begründung': 'reasoning',
   'Link': 'link',
+  'Hinzugefügt': 'added',
   'Marla': 'rating',
 };
 
@@ -79,6 +80,7 @@ function toEntry(raw) {
     deadline: parseGermanDate(stripInline(f.deadline || '')),
     reasoning: f.reasoning || '',
     link: stripInline(f.link || ''),
+    added: parseGermanDate(stripInline(f.added || '')), // optional, otherwise the digest date applies
     extra: raw.extra.join('\n'),
     fileRating: parseRating(f.rating || ''),
   };
