@@ -5,13 +5,10 @@ Stand 25.10.2026. Stellen, die du gut fandest, plus ein paar Programme, die bald
 | Frist | Was | Start | Hinweis |
 |---|---|---|---|
 | 15.10.2026 | UN Women Deutschland, Bufdi Berlin | 1.1.2027 | beworben |
-| 2.11.2026 | UN-Menschenrechtsbüro, Rechte älterer Menschen, Genf | offen | Runde 3, Nr. 8 |
 | 2.11.2026 | UNODC Menschenhandel, Wien oder remote | offen | Runde 2, Nr. 6, fandest du gut |
-| 3.11.2026 | UN-Menschenrechtsbüro, Team Zivilgesellschaft, Genf | 11.1.2027 | Runde 3, Nr. 5 |
-| 3.11.2026 | UN-Menschenrechtsrat, Praktikum Genf | offen | Runde 3, Nr. 6 |
-| 4.11.2026 | UN-Habitat, Projektmanagement Nairobi | offen | Runde 3, Nr. 7 |
-| **11.11.2026** | **UN Women, Praktikums-Pool Istanbul, mit Stipendium** | 2027 | **Runde 3, Nr. 1** |
-| **15.11.2026** | **Amnesty International, Bufdi Berlin** | 1.2.2027 | **Runde 3, Nr. 2** |
+| 3.11.2026 | UN-Menschenrechtsrat, Praktikum Genf | offen | Runde 3, Nr. 6, fandest du gut |
+| **11.11.2026** | **UN Women, Praktikums-Pool Istanbul, mit Stipendium** | 2027 | **Runde 3, Nr. 1, fandest du gut** |
+| **15.11.2026** | **Amnesty International, Bufdi Berlin** | 1.2.2027 | **Runde 3, Nr. 2, fandest du gut** |
 | 21.11.2026 | EmpowerVan Athen | nach Absprache | Runde 2, Nr. 8, fandest du gut |
 | ab 1.12.2026 | ASA-Programm, Bewerbung öffnet | Sommer/Herbst 2027 | Runde 2, Nr. 2, fandest du gut |
 | ab 10.12.2026 | Correctiv, Praktika für ab Juli | Juli 2027 | Runde 2, Nr. 10, fandest du gut |
@@ -23,7 +20,7 @@ Stand 25.10.2026. Stellen, die du gut fandest, plus ein paar Programme, die bald
 | 31.5.2027 | Schuman-Praktikum, EU-Parlament | 1.10.2027 | |
 | ca. Juni 2027 | Europarat, Traineeship | Okt. 2027 | Termin noch nicht bestätigt |
 
-**Laufend, ohne feste Frist:** weltwärts für Ausreise Sommer/Herbst 2027 (Runde 3, Nr. 3), Europäisches Solidaritätskorps (Runde 3, Nr. 4), UN Youth Volunteers (fandest du gut, Profil anlegen), Deutsches Kinderhilfswerk (fandest du gut, nur mit Einschreibung), UN-Women-Praktika weltweit, EIGE (Calls laufen nur 3 bis 4 Wochen!), GIZ.
+**Laufend, ohne feste Frist:** weltwärts für Ausreise Sommer/Herbst 2027 (Runde 3, Nr. 3, fandest du gut), Europäisches Solidaritätskorps (Runde 3, Nr. 4, fandest du gut), UN Youth Volunteers (fandest du gut, Profil anlegen), Deutsches Kinderhilfswerk (fandest du gut, nur mit Einschreibung), UN-Women-Praktika weltweit, EIGE (Calls laufen nur 3 bis 4 Wochen!), GIZ.
 
 ## Leider nicht mehr möglich
 

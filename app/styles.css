@@ -528,7 +528,7 @@ progress::-moz-progress-bar {
 }
 .badge--soon { background: var(--yellow); color: var(--ink); border-color: var(--ink); transform: rotate(-3deg); }
 .badge--expired { text-decoration: line-through; color: var(--muted); border-color: var(--muted); }
-.badge--new { background: var(--ink); color: var(--paper, #f4f1ea); border-color: var(--ink); }
+.badge--new { background: var(--text); color: var(--surface); border-color: var(--text); }
 .card-meta .added { margin-left: 0.5rem; color: var(--muted); font-weight: 400; }
 
 /* taped-on note */
@@ -660,6 +660,100 @@ progress::-moz-progress-bar {
 
 /* Overview --------------------------------------------------------------- */
 
+/* segmented controls: scope and filters */
+.segmented, .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; }
+.segmented { margin-bottom: 1.25rem; }
+
+.segment {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  min-height: 2.6rem;
+  padding: 0.35rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.segment:hover { background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+.segment[aria-pressed="true"] { background: var(--ink); color: var(--yellow); border-color: var(--ink); }
+@media (prefers-color-scheme: dark) {
+  .segment[aria-pressed="true"] { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
+}
+.segmented .segment { font-family: var(--display); font-weight: 400; font-size: 1rem; box-shadow: 3px 3px 0 var(--shadow); }
+.segmented .segment[aria-pressed="true"] { background: var(--pink); color: var(--ink); border-color: var(--ink); }
+
+.round-select { margin: 0 0 1.25rem; }
+
+.check { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--mono); font-size: 0.85rem; font-weight: 700; }
+.check input { width: 1.3rem; height: 1.3rem; accent-color: var(--pink); margin: 0; }
+
+.fav-hint {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  rotate: -1deg;
+}
+
+.result-count { margin: 0 0 0.75rem; font-family: var(--mono); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
+.result-count:focus { outline: none; }
+.result-count:focus-visible { outline: 3px solid var(--focus); }
+
+.empty {
+  margin: 0 0 2.5rem;
+  padding: 1.25rem 1rem;
+  border: 3px dashed var(--line);
+  font-size: 1.05rem;
+}
+
+/* favorite star */
+.card-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1.25rem; }
+.card-actions .link-out { margin-top: 0; }
+
+.fav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.fav-icon { display: grid; place-items: center; }
+.fav-icon path { fill: none; }
+.fav:hover { background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+.fav[aria-pressed="true"] { background: var(--yellow); color: var(--ink); border-color: var(--ink); rotate: -2deg; }
+.fav[aria-pressed="true"] .fav-icon path { fill: var(--pink); }
+
+.fav--compact {
+  align-self: stretch;
+  justify-content: center;
+  min-width: 3.25rem;
+  padding: 0;
+  border: none;
+  border-left: 2px dashed var(--line);
+  background: transparent;
+}
+.fav--compact .fav-icon svg { width: 26px; height: 26px; }
+.fav--compact[aria-pressed="true"] { rotate: 0deg; background: transparent; color: var(--text); }
+.fav--compact:hover { background: var(--yellow); color: var(--ink); }
+.row--expired .fav--compact { border-left-color: var(--muted); }
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -672,24 +766,32 @@ progress::-moz-progress-bar {
 
 .overview { list-style: none; margin: 0 0 2.5rem; padding: 0; display: grid; gap: 1rem; }
 
-.row a {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
+/* A row is a card with two controls: the link (whole left part) and the star. */
+.row {
+  display: flex;
+  align-items: stretch;
   background: var(--surface);
   border: var(--border);
   box-shadow: 4px 4px 0 var(--shadow);
-  color: var(--text);
-  text-decoration: none;
   transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-.row a:hover { background: var(--surface); color: var(--text); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pink); }
-.row--expired a { background: var(--surface-2); color: var(--muted); box-shadow: 4px 4px 0 var(--muted); }
+.row:has(.row-link:hover) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pink); }
+.row--expired { background: var(--surface-2); color: var(--muted); box-shadow: 4px 4px 0 var(--muted); }
 
+.row-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: start;
+  gap: 0.85rem;
+  padding: 0.85rem 0.5rem 0.85rem 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+.row-link:hover { background: none; color: inherit; }
+.row-link:focus-visible { outline-offset: -4px; }
 .row-number { font-family: var(--display); font-size: 1.5rem; line-height: 1; }
-.row-main { display: grid; gap: 0.2rem; min-width: 0; }
+.row-main { display: grid; gap: 0.2rem; min-width: 0; flex: 1; }
 .row-main strong { font-size: 1.05rem; line-height: 1.3; }
 .row-main .muted { font-size: 0.92rem; }
 .row-facts {
@@ -929,6 +1031,6 @@ dialog textarea { width: 100%; font-family: var(--mono); font-size: 0.8rem; }
 @media (prefers-reduced-motion: reduce) {
   .card { transform: none; transition: none; }
   .card.is-dragging { transform: translateX(var(--dx)); }
-  .button, .tag, .row a { transition: none; }
-  .button:hover, .row a:hover { transform: none; }
+  .button, .tag, .row { transition: none; }
+  .button:hover, .row:has(.row-link:hover) { transform: none; }
 }

@@ -1,6 +1,7 @@
 import { REASON_TAGS, DEADLINE_WARNING_DAYS, SWIPE_THRESHOLD, CONTENT_BASE, DIGEST_DIR, MANIFEST, PAGES } from './config.js';
 import { parseDigest, formatRating } from './digest.js';
-import { getRating, saveRating, getPref, setPref } from './storage.js';
+import { getRating, saveRating, getPref, setPref, isFavorite, setFavorite, favoriteStates } from './storage.js';
+import { digestDate, mergeDigests, isExpired, matchesFilter, sortRecords, FILTERS } from './collection.js';
 import { renderMarkdown, renderInline } from './markdown.js';
 
 const main = document.getElementById('main');
@@ -15,6 +16,8 @@ const state = {
   digests: [],      // file names from the manifest, newest first
   digestFile: null,
   digest: null,     // { intro, entries, sections }
+  cache: {},        // file -> parsed digest, all rounds loaded once
+  merged: new Map(), // id -> { id, entry, file, firstSeen, added } across all rounds
   pages: [],        // PAGES that exist, with their markdown
   index: 0,         // current card
   pending: null,    // { verdict, tags, comment } while choosing reasons
@@ -57,21 +60,28 @@ function formatDate(date) {
   return date.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric' });
 }
 
-function digestDate(file) {
-  const match = file?.match(/(\d{4})-(\d{2})-(\d{2})/);
-  return match ? new Date(match[1], match[2] - 1, match[3]) : null;
-}
-
 function digestLabel(file) {
   const date = digestDate(file);
   return date ? `Digest vom ${formatDate(date)}` : file;
 }
 
-/** When the entry landed in the tool: explicit "Hinzugefügt" field, else the digest date. */
-function addedInfo(entry) {
-  const date = entry.added || digestDate(state.digestFile);
-  const isNew = state.digestFile === state.digests[0] && state.digests.length > 1;
+/**
+ * When the entry landed in the tool: explicit "Hinzugefügt" field, else the first round
+ * that contains the ID. "Neu" means: in the newest round and not carried over.
+ */
+function addedInfo(entry, file = state.digestFile) {
+  const date = entry.added || state.merged.get(entry.id)?.firstSeen || digestDate(file);
+  const newest = digestDate(state.digests[0]);
+  const isNew = state.digests.length > 1 && file === state.digests[0] && !!date && date >= newest;
   return { date, label: date ? `seit ${formatDate(date)}` : '', isNew };
+}
+
+function formatShortDate(date) {
+  return date.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' });
+}
+
+function plural(count, one, many) {
+  return `${count} ${count === 1 ? one : many}`;
 }
 
 function deadlineInfo(entry) {
@@ -148,7 +158,14 @@ function route() {
 
   const card = hash.match(/^#\/karte\/(.+)$/);
   if (card) {
-    const index = state.digest.entries.findIndex((e) => e.id === decodeURIComponent(card[1]));
+    const id = decodeURIComponent(card[1]);
+    // Not in the open round: switch to the newest round that has it.
+    const record = state.merged.get(id);
+    if (!state.digest.entries.some((e) => e.id === id) && record && state.cache[record.file]) {
+      showDigest(record.file);
+      setPref('digest', record.file);
+    }
+    const index = state.digest.entries.findIndex((e) => e.id === id);
     if (index >= 0) state.index = index;
   }
   renderCardsView();
@@ -216,8 +233,8 @@ function digestSwitcher() {
     h('label', { for: id }, 'Anderer Digest: '),
     h('select', {
       id,
-      onchange: async (e) => {
-        await loadDigest(e.target.value);
+      onchange: (e) => {
+        showDigest(e.target.value);
         setPref('digest', e.target.value);
         history.replaceState(null, '', '#/karten');
         route();
@@ -315,7 +332,10 @@ function buildCard(entry) {
       h('p', null, renderInline(entry.reasoning)),
     ),
     entry.extra && h('div', { class: 'prose' }, renderMarkdown(entry.extra)),
-    entry.link && h('p', null, h('a', { class: 'link-out', href: entry.link, target: '_blank', rel: 'noopener noreferrer' }, 'Zur Ausschreibung', h('span', { class: 'visually-hidden' }, ' (öffnet neuen Tab)'))),
+    h('div', { class: 'card-actions' },
+      entry.link && h('a', { class: 'link-out', href: entry.link, target: '_blank', rel: 'noopener noreferrer' }, 'Zur Ausschreibung', h('span', { class: 'visually-hidden' }, ' (öffnet neuen Tab)')),
+      favButton(entry),
+    ),
     rating && !pending && h('p', { class: `current-rating current-rating--${rating.verdict === 'passt' ? 'yes' : 'no'}` },
       h('strong', null, 'Deine Bewertung: '), ratingText(rating),
       rating.source === 'file' && h('span', { class: 'muted' }, ' (schon übernommen)'),
@@ -504,63 +524,196 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Overview
+// Favorites
 
-function renderOverview() {
-  const sort = getPref('sort', 'number');
-  const entries = [...state.digest.entries];
-  const far = Number.MAX_SAFE_INTEGER;
-  if (sort === 'score') entries.sort((a, b) => b.score - a.score || a.number - b.number);
-  if (sort === 'deadline') entries.sort((a, b) => (a.deadline?.getTime() ?? far) - (b.deadline?.getTime() ?? far) || a.number - b.number);
-  if (sort === 'number') entries.sort((a, b) => a.number - b.number);
+const STAR = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2.8l2.7 6 6.5.6-4.9 4.3 1.5 6.4L12 16.8l-5.8 3.3 1.5-6.4-4.9-4.3 6.5-.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>';
 
-  const total = state.digest.entries.length;
+function favButton(entry, { compact = false } = {}) {
+  const on = isFavorite(entry.id);
+  const icon = h('span', { class: 'fav-icon' });
+  icon.innerHTML = STAR;
+  return h('button', {
+    type: 'button',
+    class: compact ? 'fav fav--compact' : 'fav',
+    'data-key': `fav-${entry.id}`,
+    'aria-pressed': String(on),
+    // In lists every row has a star, so the name says which job it is.
+    'aria-label': compact ? `Favorit: ${renderInline(entry.heading).textContent}` : null,
+    onclick: () => toggleFavorite(entry),
+  }, icon, !compact && h('span', null, 'Favorit'));
+}
+
+/** Favorites that still exist in one of the rounds. */
+function favoriteCount() {
+  return Object.entries(favoriteStates()).filter(([id, on]) => on && state.merged.has(id)).length;
+}
+
+function toggleFavorite(entry) {
+  const value = !isFavorite(entry.id);
+  if (!setFavorite(entry.id, value)) {
+    announce('Speichern hat nicht geklappt. Ist der private Modus an?');
+    return;
+  }
+  const count = favoriteCount();
+  let message = value ? `Favorit gesetzt. Du hast jetzt ${plural(count, 'Favorit', 'Favoriten')}.` : `Favorit entfernt. Noch ${plural(count, 'Favorit', 'Favoriten')}.`;
+  if (value && count > 3) message += ' Mehr als 3 Favoriten: Welche sind deine Top 3?';
+
+  if (location.hash === '#/liste') renderOverview({ focusKey: `fav-${entry.id}`, silent: true });
+  else updateCard();
+  announce(message);
+}
+
+// ---------------------------------------------------------------------------
+// Overview: all rounds (default) or one round, with filters
+
+const FILTER_LABELS = { 'passt': 'passt', 'offen': 'offen', 'passt nicht': 'passt nicht', 'alle': 'alle', 'favoriten': 'Favoriten' };
+
+const EMPTY_TEXTS = {
+  'passt': 'Noch nichts mit „passt“ markiert. Wisch dich durch die Karten, dann füllt sich hier deine Merkliste.',
+  'offen': 'Alles bewertet. Stark!',
+  'passt nicht': 'Noch nichts aussortiert.',
+  'alle': 'Hier ist gerade nichts.',
+  'favoriten': 'Noch keine Favoriten. Tipp auf den Stern bei deinen Top 3.',
+};
+
+function overviewPrefs() {
+  const scope = getPref('overviewScope', 'all') === 'round' ? 'round' : 'all';
+  const filter = getPref(`overviewFilter:${scope}`, scope === 'all' ? 'passt' : 'alle');
+  let sort = getPref('overviewSort', 'deadline');
+  if (scope === 'all' && sort === 'number') sort = 'deadline';
+  return {
+    scope,
+    filter: FILTERS.includes(filter) ? filter : 'alle',
+    sort,
+    showExpired: getPref('overviewShowExpired', false),
+  };
+}
+
+/** Records for the list, with rating and favorite looked up once. */
+function overviewPool(scope) {
+  const records = scope === 'all'
+    ? [...state.merged.values()].filter((record) => state.cache[record.file])
+    : state.digest.entries.map((entry) => ({
+      id: entry.id,
+      entry,
+      file: state.digestFile,
+      added: entry.added || state.merged.get(entry.id)?.firstSeen || digestDate(state.digestFile),
+    }));
+  return records.map((record) => ({
+    ...record,
+    rating: getRating(record.entry),
+    favorite: isFavorite(record.id),
+    expired: isExpired(record.entry),
+  }));
+}
+
+function renderOverview({ focusKey = null, silent = false } = {}) {
+  const { scope, filter, sort, showExpired } = overviewPrefs();
+  const pool = overviewPool(scope);
+  // Expired deadlines are hidden in "all rounds" unless asked for.
+  const hideExpired = scope === 'all' && !showExpired;
+  const visible = hideExpired ? pool.filter((r) => !r.expired) : pool;
+  const counts = Object.fromEntries(FILTERS.map((f) => [f, visible.filter((r) => matchesFilter(f, r)).length]));
+  const inFilter = pool.filter((r) => matchesFilter(filter, r));
+  const expiredInFilter = inFilter.filter((r) => r.expired).length;
+  const shown = sortRecords(hideExpired ? inFilter.filter((r) => !r.expired) : inFilter, sort);
+  const favorites = favoriteCount();
+
+  const change = (pref, value, key) => {
+    setPref(pref, value);
+    renderOverview({ focusKey: key });
+  };
+
+  const segment = (label, pressed, key, onclick) => h('button', {
+    type: 'button', class: 'segment', 'data-key': key, 'aria-pressed': String(pressed), onclick,
+  }, label);
+
+  const sortOptions = [
+    ['deadline', 'Frist'],
+    ['score', 'Score'],
+    ['added', 'Neueste zuerst'],
+    scope === 'round' && ['number', 'Reihenfolge im Digest'],
+  ].filter(Boolean);
 
   setMain(
     h('h1', null, h('span', { class: 'mark' }, 'Übersicht')),
+    h('div', { class: 'segmented', role: 'group', 'aria-label': 'Welche Runden' },
+      segment('Alle Runden', scope === 'all', 'scope-all', () => change('overviewScope', 'all', 'scope-all')),
+      segment('Diese Runde', scope === 'round', 'scope-round', () => change('overviewScope', 'round', 'scope-round')),
+    ),
+    scope === 'round' && state.digests.length > 1 && h('p', { class: 'field field--inline round-select' },
+      h('label', { for: 'round' }, 'Runde'),
+      h('select', {
+        id: 'round', 'data-key': 'round',
+        onchange: (e) => { showDigest(e.target.value); setPref('digest', e.target.value); renderOverview({ focusKey: 'round' }); },
+      }, state.digests.filter((file) => state.cache[file]).map((file) => h('option', { value: file, selected: file === state.digestFile }, digestLabel(file)))),
+    ),
+    h('div', { class: 'filters', role: 'group', 'aria-label': 'Filter' },
+      FILTERS.map((f) => segment(`${FILTER_LABELS[f]} (${counts[f]})`, f === filter, `filter-${f}`,
+        () => change(`overviewFilter:${scope}`, f, `filter-${f}`))),
+    ),
     h('div', { class: 'toolbar' },
-      h('p', null, `${digestLabel(state.digestFile)}: ${ratedCount()} von ${total} bewertet`),
       h('p', { class: 'field field--inline' },
         h('label', { for: 'sort' }, 'Sortieren nach'),
-        h('select', {
-          id: 'sort',
-          onchange: (e) => { setPref('sort', e.target.value); renderOverview(); document.getElementById('sort').focus(); },
-        },
-          h('option', { value: 'number', selected: sort === 'number' }, 'Reihenfolge im Digest'),
-          h('option', { value: 'score', selected: sort === 'score' }, 'Score'),
-          h('option', { value: 'deadline', selected: sort === 'deadline' }, 'Frist'),
-        ),
+        h('select', { id: 'sort', 'data-key': 'sort', onchange: (e) => change('overviewSort', e.target.value, 'sort') },
+          sortOptions.map(([value, label]) => h('option', { value, selected: value === sort }, label))),
+      ),
+      scope === 'all' && (expiredInFilter > 0 || showExpired) && h('p', { class: 'check' },
+        h('input', {
+          type: 'checkbox', id: 'show-expired', 'data-key': 'show-expired', checked: showExpired,
+          onchange: (e) => change('overviewShowExpired', e.target.checked, 'show-expired'),
+        }),
+        h('label', { for: 'show-expired' }, `Abgelaufene zeigen (${expiredInFilter})`),
       ),
     ),
-    h('ul', { class: 'overview' }, entries.map(overviewRow)),
-    state.digest.sections.map((section) => h('section', { class: 'prose extra-section' }, renderMarkdown(section))),
+    favorites > 3 && h('p', { class: 'fav-hint' }, 'Mehr als 3 Favoriten: Welche sind deine Top 3?'),
+    h('p', { class: 'result-count', id: 'result-count', tabindex: '-1' }, plural(shown.length, 'Stelle', 'Stellen')),
+    shown.length
+      ? h('ul', { class: 'overview' }, shown.map((record) => overviewRow(record, scope)))
+      : h('p', { class: 'empty' }, EMPTY_TEXTS[filter],
+        hideExpired && expiredInFilter > 0 && ` ${plural(expiredInFilter, 'abgelaufene ist', 'abgelaufene sind')} ausgeblendet.`),
+    scope === 'round' && state.digest.sections.map((section) => h('section', { class: 'prose extra-section' }, renderMarkdown(section))),
     h('p', null, h('button', { type: 'button', class: 'button', onclick: openExport }, 'Bewertungen schicken')),
   );
-  focusMain();
+
+  if (!focusKey) {
+    focusMain();
+    return;
+  }
+  // Keep the focus on the control that was used; if it is gone (e.g. the row left
+  // the favorites filter), go to the result count.
+  const target = main.querySelector(`[data-key="${CSS.escape(focusKey)}"]`) || document.getElementById('result-count');
+  target.focus({ preventScroll: true });
+  if (!silent) announce(`${plural(shown.length, 'Stelle', 'Stellen')} in der Liste.`);
 }
 
-function overviewRow(entry) {
+function overviewRow(record, scope) {
+  const { entry, file } = record;
   const deadline = deadlineInfo(entry);
-  const added = addedInfo(entry);
-  const rating = getRating(entry);
+  const added = addedInfo(entry, file);
+  const rating = record.rating;
   const ratingClass = rating ? (rating.verdict === 'passt' ? 'yes' : 'no') : 'open';
+  const round = scope === 'all'
+    ? record.added && `aus Runde vom ${formatShortDate(record.added)}`
+    : added.label;
 
   return h('li', { class: `row${deadline.state === 'expired' ? ' row--expired' : ''}` },
-    h('a', { href: `#/karte/${encodeURIComponent(entry.id)}` },
-      h('span', { class: 'row-number' }, `${entry.number}.`),
+    h('a', { class: 'row-link', href: `#/karte/${encodeURIComponent(entry.id)}` },
+      scope === 'round' && h('span', { class: 'row-number' }, `${entry.number}.`),
       h('span', { class: 'row-main' },
         h('strong', null, renderInline(entry.heading)),
         h('span', { class: 'muted' }, [entry.organisation, entry.location].filter(Boolean).map((v) => renderInline(v).textContent).join(' · ')),
         h('span', { class: 'row-facts' },
           added.isNew && h('span', { class: 'badge badge--new' }, 'neu'),
           h('span', null, `Score ${entry.score}`),
-          added.label && h('span', null, added.label),
+          round && h('span', null, round),
           h('span', null, `Frist: ${entry.deadlineText || 'keine Angabe'}`),
           deadline.label && h('span', { class: `badge badge--${deadline.state}` }, deadline.label),
         ),
       ),
       h('span', { class: `chip chip--${ratingClass}` }, rating ? rating.verdict : 'offen'),
     ),
+    favButton(entry, { compact: true }),
   );
 }
 
@@ -699,20 +852,35 @@ const exportStatus = document.getElementById('export-status');
 const shareButton = document.getElementById('export-share');
 
 function buildExport() {
-  const rated = state.digest.entries
-    .map((entry) => ({ entry, rating: getRating(entry) }))
-    .filter(({ rating }) => rating && rating.source === 'local');
-  if (!rated.length) return '';
-
-  const lines = [
-    `# Bewertungen von Marla zu ${state.digestFile}`,
-    '',
-    `Stand ${formatDate(new Date())}, ${rated.length} neue oder geänderte Bewertungen.`,
-  ];
-  for (const { entry, rating } of rated) {
-    lines.push('', `## ${entry.number}. ${entry.heading}`, '', `- **ID:** \`${entry.id}\``, formatRating(rating));
+  const favorites = favoriteStates();
+  const byFile = new Map();
+  for (const record of state.merged.values()) {
+    if (!state.cache[record.file]) continue;
+    const rating = getRating(record.entry);
+    const localRating = rating?.source === 'local' ? rating : null;
+    const favorite = record.id in favorites ? favorites[record.id] : null;
+    if (!localRating && favorite === null) continue;
+    if (!byFile.has(record.file)) byFile.set(record.file, []);
+    byFile.get(record.file).push({ entry: record.entry, rating: localRating, favorite });
   }
-  return `${lines.join('\n')}\n`;
+  if (!byFile.size) return '';
+
+  const today = formatDate(new Date());
+  const blocks = [...byFile.keys()].sort().reverse().map((file) => {
+    const items = byFile.get(file).sort((a, b) => a.entry.number - b.entry.number);
+    const lines = [
+      `# Bewertungen von Marla zu ${file}`,
+      '',
+      `Stand ${today}, ${plural(items.length, 'neuer oder geänderter Eintrag', 'neue oder geänderte Einträge')}.`,
+    ];
+    for (const { entry, rating, favorite } of items) {
+      lines.push('', `## ${entry.number}. ${entry.heading}`, '', `- **ID:** \`${entry.id}\``);
+      if (rating) lines.push(formatRating(rating));
+      if (favorite !== null) lines.push(`- **Favorit:** ${favorite ? 'ja' : 'nein'}`);
+    }
+    return lines.join('\n');
+  });
+  return `${blocks.join('\n\n')}\n`;
 }
 
 function openExport() {
@@ -737,7 +905,7 @@ document.getElementById('export-copy').addEventListener('click', async () => {
 document.getElementById('export-download').addEventListener('click', () => {
   const blob = new Blob([exportText.value], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const a = h('a', { href: url, download: `bewertungen-${state.digestFile}` });
+  const a = h('a', { href: url, download: `bewertungen-${new Date().toISOString().slice(0, 10)}.md` });
   document.body.append(a);
   a.click();
   a.remove();
@@ -759,9 +927,25 @@ document.getElementById('export-close').addEventListener('click', () => dialog.c
 // ---------------------------------------------------------------------------
 // Startup
 
-async function loadDigest(file) {
+/** Load and parse every digest from the manifest once; failed ones are skipped. */
+async function loadAllDigests() {
+  const loaded = (await Promise.all(state.digests.map(async (file) => {
+    try {
+      return { file, digest: parseDigest(await fetchText(`${DIGEST_DIR}${file}`)) };
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }))).filter(Boolean);
+  if (!loaded.length) throw new Error('Kein Digest ließ sich laden');
+  for (const { file, digest } of loaded) state.cache[file] = digest;
+  state.merged = mergeDigests(loaded);
+}
+
+/** Open one round in the cards view (from memory). */
+function showDigest(file) {
   state.digestFile = file;
-  state.digest = parseDigest(await fetchText(`${DIGEST_DIR}${file}`));
+  state.digest = state.cache[file];
   state.index = Math.max(0, state.digest.entries.findIndex((entry) => !getRating(entry)));
 }
 
@@ -786,11 +970,9 @@ async function init() {
     const newest = state.digests[0];
     const knownNewest = getPref('newestSeen', null);
     setPref('newestSeen', newest);
-    const start = knownNewest === newest && state.digests.includes(preferred) ? preferred : newest;
-    await Promise.all([
-      loadDigest(start),
-      loadPages(),
-    ]);
+    const wanted = knownNewest === newest && state.digests.includes(preferred) ? preferred : newest;
+    await Promise.all([loadAllDigests(), loadPages()]);
+    showDigest(state.cache[wanted] ? wanted : state.digests.find((file) => state.cache[file]));
   } catch (error) {
     console.error(error);
     setMain(

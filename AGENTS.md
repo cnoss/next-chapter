@@ -30,9 +30,42 @@ Für „passt“: `Thema`, `Ort`, `Tätigkeit`, `Organisation`, `Geld`, `Timing`
 
 Die Tags sollen leicht erweiterbar sein (eine Konfigurationsstelle, kein Suchen im Code).
 
-### Später (nicht in v1)
+### Gesamtübersicht über alle Runden (v2, beauftragt am 25.10.2026)
 
-- Mehrere Digests nebeneinander, Verlauf über die Zeit
+**Wunsch von Marla:** Bisher ist jede Runde eine eigene Liste, und man muss zwischen den Digests hin und her schalten. Sie möchte alle Stellen aus allen Runden auf einen Blick sehen. Ab jetzt beginnt die Bewerbungsphase, die Übersicht ist also vor allem ihre Merkliste.
+
+**Umsetzung:**
+
+1. **Die bestehende Übersicht (`#/liste`) bekommt eine Umschaltung „Alle Runden“ / „Diese Runde“.** Standard ist „Alle Runden“. Kein zusätzlicher Reiter in der Tabbar, die bleibt bei vier Einträgen.
+2. **Datenquelle:** alle Digests aus `content/digests.json` laden und parsen. Einträge über die **ID** zusammenführen: Taucht eine ID in mehreren Digests auf, zählt der neueste Digest (Felder), die Bewertung kommt wie bisher aus `getRating()`. Bewertungen liegen nur im `localStorage` (die Digests im Repo haben leere `Marla:`-Zeilen), das ist so gewollt.
+3. **Filter** (als Chips oder Segmented Control, mehrfach kombinierbar nicht nötig, einer gleichzeitig reicht):
+   - `passt` (Standard, das ist die Merkliste)
+   - `offen` (noch nicht bewertet)
+   - `passt nicht`
+   - `alle`
+   - `Favoriten` (siehe Punkt 6)
+   Mit Anzahl pro Filter, z. B. „passt (24)“.
+4. **Sortierung:** nach Frist (Standard), nach Score, nach „seit“ (neueste zuerst). Die bestehende Sortierlogik wiederverwenden. Einträge ohne Datum als Frist („laufend“) kommen bei Sortierung nach Frist nach den datierten, aber vor den abgelaufenen.
+5. **Abgelaufene Fristen:** bei „Alle Runden“ standardmäßig ausgeblendet, mit Schalter „Abgelaufene zeigen (n)“. Ausgegraut, wenn eingeblendet.
+6. **Favoriten (Top 3):** Auf jeder Karte und in jeder Listenzeile ein Stern-Button „Favorit“ (`aria-pressed`). Gespeichert im `localStorage` an der ID, unabhängig von der Bewertung. Keine harte Grenze, aber ein Hinweis, wenn mehr als 3 markiert sind („Mehr als 3 Favoriten: Welche sind deine Top 3?“). Favoriten werden im Export mitgeschickt, siehe Datenformat.
+7. **Jede Zeile zeigt:** Titel (Heading), Organisation, Ort, Frist mit Badge, Score, Bewertung als Chip, Favoriten-Stern und **„aus Runde vom TT.MM.“** (Datum aus dem Digest-Dateinamen bzw. Feld `Hinzugefügt`). Klick öffnet die Karte im richtigen Digest (`#/karte/<id>` muss dafür den Digest wechseln können, falls die ID nicht im aktuellen Digest liegt).
+8. **Leerer Zustand:** freundlicher Text pro Filter, z. B. „Noch keine Favoriten. Tipp auf den Stern bei deinen Top 3.“
+9. **Performance:** Digests einmal laden und im Speicher halten. Der Service Worker cacht ohnehin alle Digests aus dem Manifest.
+
+**Umgesetzt am 25.10.2026.** Zusammenführen, Filtern und Sortieren stecken in `app/collection.js` (ohne DOM, in Node testbar), Favoriten in `app/storage.js`. „Diese Runde“ startet mit dem Filter „alle“, damit eine frische Runde vollständig sichtbar ist. Der Export enthält Bewertungen und Favoriten aus allen Runden, ein Block pro Digest-Datei (jeweils die neueste Datei, in der die ID vorkommt).
+
+**Nicht ändern:** Kartenansicht (`#/karten`) bleibt pro Digest, weil das Durchswipen einer neuen Runde der Kern ist. Das Datenformat der Digests bleibt gleich.
+
+**Akzeptanzkriterien:**
+- Mit drei Digests zeigt „Alle Runden“ + „passt“ alle positiv bewerteten Einträge aus allen drei Dateien, sortiert nach Frist.
+- Eine ID, die in zwei Digests vorkommt, erscheint nur einmal.
+- Favoriten überleben Neuladen und Digest-Wechsel.
+- Tastatur- und Screenreader-Bedienung wie im Rest des Tools: Filter und Sortierung sind echte Formularelemente oder Buttons mit `aria-pressed`, Änderungen der Trefferzahl werden über `aria-live` angesagt.
+- Funktioniert offline (Service Worker) und im Dark Mode.
+
+### Später (nicht beauftragt)
+
+- **Bewerbungsstatus** pro Stelle: offen, beworben, Absage, Zusage, Gespräch. Passt als Erweiterung der Gesamtübersicht. Erst bauen, wenn Christian es beauftragt.
 - Auswertung: welche Gründe wie oft genannt werden
 - Profil-Datei direkt im Tool anzeigen
 
@@ -102,6 +135,14 @@ Eine abgegebene Bewertung sieht so aus. Genau dieses Format wird später wieder 
 - Urteil: `passt` oder `passt nicht`
 - `Grund:` die gewählten Tags, kommagetrennt
 - `Kommentar:` optional, nur wenn Freitext vorhanden
+
+**Favoriten im Export (seit v2):** Ist ein Eintrag als Favorit markiert, kommt im Export direkt unter der `Marla:`-Zeile eine eigene Zeile dazu:
+
+```markdown
+- **Favorit:** ja
+```
+
+Wird ein Favorit wieder entfernt, exportiert das Tool `- **Favorit:** nein`, damit Claudian die Änderung mitbekommt. Favoriten können auch ohne Bewertung exportiert werden, dann fehlt die `Marla:`-Zeile. Der Export enthält Favoriten aus allen Runden, gruppiert nach Digest-Datei wie bisher.
 
 ## Entscheidung: Wo werden Bewertungen gespeichert?
 

@@ -55,6 +55,43 @@ export function saveRating(entry, { verdict, tags, comment }) {
   return writeAll(all);
 }
 
+// Favorites, keyed by entry ID, independent of the rating.
+// true = favorite, false = was a favorite and got removed (exported as "Favorit: nein"
+// so the change reaches the profile). IDs that were never favorites are not stored.
+
+const FAV_KEY = 'marla:favorites:v1';
+
+function readFavorites() {
+  try {
+    return JSON.parse(localStorage.getItem(FAV_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+export function isFavorite(id) {
+  return readFavorites()[id] === true;
+}
+
+/** All IDs with an explicit favorite state: { id: true | false }. */
+export function favoriteStates() {
+  return readFavorites();
+}
+
+/** Set or clear a favorite. Returns false if storage is unavailable. */
+export function setFavorite(id, value) {
+  const all = readFavorites();
+  if (value) all[id] = true;
+  else if (all[id] === true) all[id] = false;
+  else delete all[id];
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify(all));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Small per-viewer preferences (sort order, collapsed intro, ...). */
 export function getPref(name, fallback) {
   try {

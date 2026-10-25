@@ -14,6 +14,7 @@ const SHELL = [
   'app/main.js',
   'app/config.js',
   'app/digest.js',
+  'app/collection.js',
   'app/storage.js',
   'app/markdown.js',
   'app/styles.css',
